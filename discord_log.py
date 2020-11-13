@@ -8,10 +8,9 @@ import json, requests, os, codecs, time, errno, signal
 # timezone name goes here
 tz_out = tz.gettz('America/New_York')
 
-# username, user token (control+shift+I in Discord client, "localStorage.token" in the console tab)
+# username, user token
 users = [
 	('some_username', 'users_token'),
-	('some_other_user', 'other_token'),
 ]
 
 # relative path if None, else absolute path
@@ -44,12 +43,12 @@ class CatchKeyboardInterrupt(object):
 def req(uri, token, params=None):
 	while True:
 		req = requests.request('GET', r'https://discordapp.com/api/%s' % (uri,), headers={'Authorization': token}, params=params)
-		#print req.url
+		#print(req.url)
 		ret = json.loads(req.text)
 
 		if('retry_after' in ret):
 			retry = (int(ret['retry_after']) + 750) / 1000.0
-			print '[-] Rate limit exceeded, retrying in %.2f seconds' % (retry)
+			print('[-] Rate limit exceeded, retrying in %.2f seconds' % (retry))
 			time.sleep(retry)
 			continue
 
@@ -78,10 +77,10 @@ def pull(username, token):
 				for k,v in json.loads(f.read()).iteritems():
 					savepoints[int(k)] = int(v)
 		except:
-			print '[!] Failed loading savepoint information'
+			print('[!] Failed loading savepoint information')
 			raise
 
-	print '[*] Pulling direct messages for %s' % (username,)
+	print('[*] Pulling direct messages for %s' % (username,))
 	dms = req('users/@me/channels', token)
 
 	for conv in dms:
@@ -94,7 +93,7 @@ def pull(username, token):
 
 		last_msg = None
 
-		print '[*] Pulling conversations with %s (%s)' % (outname, uid)
+		print('[*] Pulling conversations with %s (%s)' % (outname, uid))
 
 		while True:
 			# pull the next set of messages (100 at a time) starting at either 0, or the last message we saved from a previous run
@@ -143,7 +142,7 @@ def pull(username, token):
 				for fn, msgs in write_block:
 					# only show a writing message when we first start writing a new date
 					if(last_msg != fn):
-						print '[*] Writing %s' % (fn,)
+						print('[*] Writing %s' % (fn,))
 						last_msg = fn
 
 					with codecs.open(fn, 'a', 'UTF-8') as f:

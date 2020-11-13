@@ -2,7 +2,7 @@ from collections import defaultdict
 from tzlocal import get_localzone
 from datetime import datetime
 from unidecode import unidecode
-import json, requests, os, codecs, time, errno, signal
+import json, requests, os, codecs, time, errno, signal, string, re
 
 # timezone goes here
 tz_out = get_localzone() #tz.gettz('America/New_York')
@@ -14,6 +14,19 @@ users = [
 
 # relative path if None, else absolute path
 write_path = None # /somewhere/directory
+
+
+
+
+invalid_fn_reg = re.compile('[^%s]+' % (re.escape(''.join(frozenset("-_.() %s%s" % (string.ascii_letters, string.digits))))))
+underscore_reg = re.compile('_+')
+
+def sanitize_filename(fn):
+	ret = invalid_fn_reg.sub('_', fn)
+	ret = underscore_reg.sub('_', ret)
+	if(ret == '_'):
+		return None
+	return ret
 
 
 def mkdir_tree(path):
@@ -56,6 +69,8 @@ def req(uri, token, params=None):
 
 		return ret
 
+hit_usernames = dict()
+
 def pull(username, token):
 	# savepoints stores the last message ID we've pulled from the server on previous runs
 	savepoints = defaultdict(lambda: 0)
@@ -89,8 +104,15 @@ def pull(username, token):
 
 		recipient = conv['recipients'][0]
 		# prepare write directory
-		outname = unidecode(recipient['username']).lower()
+		dmusername = unidecode(recipient['username']).lower()
+		outname = sanitize_filename(dmusername)
 		uid = int(recipient['id'])
+
+		if(outname in hit_usernames):
+			print('[!] Username collision, two usernames both would write to output directory: %r [user1: %r, user2: %r]' % (outname,hit_usernames[outname],dmusername))
+			break
+
+		hit_usernames[outname] = dmusername
 
 		outpath = os.path.join(base_outpath, outname)
 		mkdir_tree(outpath)

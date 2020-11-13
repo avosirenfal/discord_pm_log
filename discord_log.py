@@ -88,7 +88,7 @@ def pull(username, token):
 	if(os.path.exists(savepoint_fn)):
 		try:
 			with open(savepoint_fn, 'rb') as f:
-				for k,v in json.loads(f.read()).iteritems():
+				for k,v in json.loads(f.read()).items():
 					savepoints[int(k)] = int(v)
 		except:
 			print('[!] Failed loading savepoint information')

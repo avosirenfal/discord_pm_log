@@ -1,12 +1,11 @@
 from collections import defaultdict
-import dateutil.parser
-from dateutil.tz.tz import _datetime_to_timestamp
-from dateutil import tz
+from tzlocal import get_localzone
+from datetime import datetime
 from unidecode import unidecode
 import json, requests, os, codecs, time, errno, signal
 
-# timezone name goes here
-tz_out = tz.gettz('America/New_York')
+# timezone goes here
+tz_out = get_localzone() #tz.gettz('America/New_York')
 
 # username, user token
 users = [
@@ -84,9 +83,14 @@ def pull(username, token):
 	dms = req('users/@me/channels', token)
 
 	for conv in dms:
+		if(len(conv['recipients']) > 1):
+			print('[-] Skipping group chat with ID: %s' % (conv['id']))
+			continue
+
+		recipient = conv['recipients'][0]
 		# prepare write directory
-		outname = unidecode(conv['recipient']['username']).lower()
-		uid = int(conv['recipient']['id'])
+		outname = unidecode(recipient['username']).lower()
+		uid = int(recipient['id'])
 
 		outpath = os.path.join(base_outpath, outname)
 		mkdir_tree(outpath)
@@ -110,8 +114,9 @@ def pull(username, token):
 
 			# parse UTC timestamps into local time datetime objects, create posix timestamps for sorting
 			for msg in convd:
-				msg['timestamp'] = dateutil.parser.parse(msg['timestamp']).astimezone(tz_out)
-				msg['posix'] = int(_datetime_to_timestamp(msg['timestamp']))
+				dt = datetime.fromisoformat(msg['timestamp'])
+				msg['timestamp'] = dt.astimezone(tz_out)
+				msg['posix'] = int(dt.timestamp())
 
 			# Discord API doesn't return messages in order, sort them now
 			convd = sorted(convd, key=lambda x: x['posix'])
@@ -148,7 +153,7 @@ def pull(username, token):
 					with codecs.open(fn, 'a', 'UTF-8') as f:
 						f.write('%s\n' % ('\n'.join(msgs),))
 
-				with open(savepoint_fn, 'wb') as f:
+				with codecs.open(savepoint_fn, 'w', 'UTF-8') as f:
 					f.write(json.dumps(savepoints))
 
 			# if the user interrupted us during write, exit now that we're done saving

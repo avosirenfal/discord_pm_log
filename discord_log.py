@@ -98,7 +98,7 @@ def pull(username, token):
 	dms = req('users/@me/channels', token)
 
 	for conv in dms:
-		if(len(conv['recipients']) > 1):
+		if(conv['type'] != 1):
 			print('[-] Skipping group chat with ID: %s' % (conv['id']))
 			continue
 
